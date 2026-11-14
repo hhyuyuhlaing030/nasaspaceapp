@@ -1,0 +1,2140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COSMO™ // TERRA-ANALOG — Planetary Surface Analog & Mission Site Explorer</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans, Space Grotesk, Inter, JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cosmos: {
+                            void: '#04070D',
+                            deep: '#080D17',
+                            panel: '#0E1525',
+                            border: '#1E293B',
+                            blue: '#2563EB',
+                            glow: '#3B82F6',
+                            cyan: '#00F0FF',
+                            mist: '#EFE6DF',
+                            sand: '#D8C7BA',
+                            terracotta: '#9A4E33'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <style>
+        html {
+            scroll-behavior: smooth;
+            background-color: #04070D;
+            color: #F8FAFC;
+        }
+
+        body {
+            background-color: #04070D;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #04070D;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        /* Orbital Hero Pill Glow */
+        .btn-orbital-blue {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            box-shadow: 0 0 24px rgba(37, 99, 235, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+            transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .btn-orbital-blue:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 34px rgba(59, 130, 246, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-pill-dark {
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s ease;
+        }
+        .nav-pill-dark:hover {
+            background: rgba(30, 41, 59, 0.75);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        /* COSMO Expedition Frosted Glass Cards (Design 2) */
+        .cosmo-hud-card {
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.34) 0%, rgba(165, 136, 118, 0.28) 55%, rgba(62, 43, 33, 0.48) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.38);
+            box-shadow: 0 12px 32px rgba(28, 18, 12, 0.18);
+        }
+
+        .cosmo-hud-topbox {
+            background: rgba(255, 255, 255, 0.22);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(45, 34, 28, 0.14);
+        }
+
+        /* Custom Range Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 5px;
+            border-radius: 3px;
+            background: #1E293B;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -5px;
+            background-color: #3B82F6;
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Glowing Map Pins */
+        .telemetry-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+        .telemetry-pin:hover {
+            transform: scale(1.25);
+            z-index: 1000 !important;
+        }
+        .telemetry-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            animation: pulse-ring 2.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.85; }
+            80%, 100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* Leaflet Dark Styling */
+        .leaflet-container {
+            background: #060A12 !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(4, 7, 13, 0.85) !important;
+            color: #64748B !important;
+            font-size: 10px !important;
+        }
+        .leaflet-control-attribution a {
+            color: #60A5FA !important;
+        }
+        .leaflet-control-zoom a {
+            background-color: #0E1525 !important;
+            color: #F8FAFC !important;
+            border-color: #1E293B !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background-color: #1E293B !important;
+            color: #60A5FA !important;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-blue-500/30 selection:text-blue-200">
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 1: ORBITAL HERO LANDING (DESIGN 1 INSPIRED)                   -->
+    <!-- ===================================================================== -->
+    <section id="hero-orbital" class="relative min-h-screen w-full flex flex-col justify-between overflow-hidden bg-[#04070D] p-3 sm:p-5 lg:p-6">
+        <!-- Main Rounded Space Frame -->
+        <div class="relative flex-1 w-full rounded-[28px] sm:rounded-[36px] border border-white/10 bg-[#050811] overflow-hidden flex flex-col justify-between shadow-[0_0_80px_rgba(37,99,235,0.12)]">
+            
+            <!-- Procedural Orbital Earth & Starfield Canvas -->
+            <canvas id="orbitalHeroCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+            <!-- Top Floating Pill Navigation Bar -->
+            <header class="relative z-20 flex items-center justify-between px-4 sm:px-8 pt-5 sm:pt-7">
+                <!-- Left Pill Navigation Links -->
+                <nav class="hidden md:flex items-center gap-2">
+                    <a href="#hero-orbital" class="nav-pill-dark px-4 py-2 rounded-full text-xs font-medium text-slate-200 flex items-center gap-1.5">
+                        <span>Home</span>
+                        <span class="text-slate-400 text-[10px]">+</span>
+                    </a>
+                    <a href="#preference-explorer" class="nav-pill-dark px-4 py-2 rounded-full text-xs font-medium text-slate-200 flex items-center gap-1.5">
+                        <span>Analog Explorer</span>
+                        <span class="text-slate-400 text-[10px]">+</span>
+                    </a>
+                    <a href="#expedition-hud" class="nav-pill-dark px-4 py-2 rounded-full text-xs font-medium text-slate-200 flex items-center gap-1.5">
+                        <span>Expedition HUD</span>
+                        <span class="text-slate-400 text-[10px]">+</span>
+                    </a>
+                </nav>
+
+                <!-- Mobile Menu Trigger -->
+                <div class="flex md:hidden">
+                    <button onclick="document.getElementById('preference-explorer').scrollIntoView({behavior:'smooth'})" class="nav-pill-dark px-3.5 py-2 rounded-full text-xs font-medium text-slate-200">
+                        Explorer
+                    </button>
+                </div>
+
+                <!-- Center Brand Logo (Galactic / COSMO™) -->
+                <div class="flex items-center gap-2 select-none">
+                    <span class="font-display font-semibold text-lg sm:text-xl tracking-tight text-white">COSMO<sup class="text-[10px] text-blue-400 ml-0.5">™</sup></span>
+                    <span class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-widest text-blue-300/70 border-l border-white/15 pl-2">TERRA-ANALOG</span>
+                </div>
+
+                <!-- Right Pill Controls -->
+                <div class="flex items-center gap-2.5">
+                    <button onclick="toggleCustomModal()" class="nav-pill-dark px-3.5 sm:px-4 py-2 rounded-full text-xs font-medium text-slate-200 flex items-center gap-2">
+                        <span class="hidden sm:inline">Custom Site</span>
+                        <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <a href="#preference-explorer" class="btn-orbital-blue px-4 sm:px-5 py-2 rounded-full text-xs font-semibold text-white tracking-wide">
+                        Launch Explorer
+                    </a>
+                </div>
+            </header>
+
+            <!-- Center Hero Typography & Dual-Mode Quick Launch -->
+            <div class="relative z-20 flex flex-col items-center text-center px-4 mt-8 sm:mt-10 mb-auto">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/25 text-[11px] font-mono text-blue-300 mb-4">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span>
+                    <span>2026 NASA SPACE APPS CHALLENGE • PLANETARY ANALOG ENGINE</span>
+                </div>
+
+                <h1 class="font-display text-4xl sm:text-6xl lg:text-[72px] font-normal tracking-[0.06em] leading-none uppercase select-none">
+                    <span class="text-white font-medium">EXPLORE</span>
+                    <span class="text-slate-400/80 font-light ml-2 sm:ml-3">SPACE</span>
+                </h1>
+
+                <p class="max-w-xl text-xs sm:text-sm text-slate-300/85 font-normal leading-relaxed mt-4 sm:mt-5">
+                    Identify and characterize terrestrial analogs for permanent Moon base locations and Mars landing sites using open NASA Earthdata, LRO, and MRO telemetry. Filter by single planetary parameters—such as <span class="text-blue-300 font-medium">Air Pressure Only</span>—to pinpoint exact coordinates and similarity scores.
+                </p>
+
+                <!-- Glowing Pill CTA + Quick Scientist Preset Chips -->
+                <div class="mt-6 sm:mt-7 flex flex-wrap items-center justify-center gap-3">
+                    <a href="#preference-explorer" class="group inline-flex items-center gap-3 pl-5 pr-2 py-1.5 rounded-full bg-slate-900/80 border border-white/15 hover:border-blue-400/50 transition-all shadow-[0_0_30px_rgba(37,99,235,0.25)]">
+                        <span class="text-xs sm:text-sm font-medium text-white">Start Exploring</span>
+                        <span class="w-8 h-8 rounded-full btn-orbital-blue flex items-center justify-center text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M7 17L17 7M17 7H8M17 7V16"></path>
+                            </svg>
+                        </span>
+                    </a>
+
+                    <button onclick="quickPreset('mars', 'pressure')" class="px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-slate-300 hover:text-white transition-all flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span>Demo: Mars Air Pressure Only</span>
+                    </button>
+
+                    <button onclick="quickPreset('moon', 'all')" class="px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-slate-300 hover:text-white transition-all flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span>Demo: Artemis Moon Base Analogs</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Spacer so Earth Horizon Shines Clearly -->
+            <div class="h-44 sm:h-60 lg:h-72 pointer-events-none"></div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 2: SCIENTIST PREFERENCE & PARAMETER ISOLATION ENGINE          -->
+    <!-- ===================================================================== -->
+    <section id="preference-explorer" class="relative py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+        
+        <!-- Section Header & Target Body Toggle -->
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 border-b border-slate-800/80 pb-6">
+            <div>
+                <div class="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-blue-400 mb-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    <span>STEP 01 // SCIENTIST PREFERENCE & PARAMETER ISOLATION</span>
+                </div>
+                <h2 class="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold text-white tracking-tight">
+                    Planetary Analog Match Engine
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-2xl">
+                    Select your target celestial body and isolate a specific environmental parameter (e.g., <strong class="text-slate-200">Air Pressure Only</strong>) or combine weighted geological indices to locate exact Earth coordinates and analog match percentages.
+                </p>
+            </div>
+
+            <!-- Planetary Baseline Switcher (Mars vs Moon) -->
+            <div class="flex items-center bg-[#0B1120] p-1.5 rounded-2xl border border-slate-800 self-start lg:self-auto shadow-lg">
+                <button id="target-btn-mars" onclick="setPlanetaryTarget('mars')" class="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-red-500/20 text-red-200 border border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#EF4444]"></span>
+                    <div class="text-left">
+                        <div>Mars Baseline</div>
+                        <div class="text-[10px] font-mono text-red-300/75 font-normal">6.1 mbar • -63°C • Basalt/Fe₂O₃</div>
+                    </div>
+                </button>
+                <button id="target-btn-moon" onclick="setPlanetaryTarget('moon')" class="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-white border border-transparent">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                    <div class="text-left">
+                        <div>Moon Base Baseline</div>
+                        <div class="text-[10px] font-mono text-slate-400 font-normal">~0 mbar • Shackleton Rim • Anorthosite</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Single-Parameter Isolation Bar ("If a scientist wants only Air Pressure...") -->
+        <div class="bg-[#0A101D] border border-slate-800/90 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                    </svg>
+                    <span class="text-xs font-mono uppercase tracking-wider text-slate-200 font-semibold">Scientist Parameter Isolation Mode</span>
+                </div>
+                <span id="isolation-status-text" class="text-xs font-mono text-blue-400">
+                    Active Filter: Multi-Parameter Weighted Profile
+                </span>
+            </div>
+
+            <!-- Parameter Isolation Chips -->
+            <div class="flex flex-wrap gap-2" id="isolation-chips">
+                <button onclick="setIsolationMode('all')" data-mode="all" class="iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-blue-600 text-white border border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                    All Parameters (Weighted)
+                </button>
+                <button onclick="setIsolationMode('pressure')" data-mode="pressure" class="iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700/80 flex items-center gap-1.5">
+                    <span>🌬️ Air Pressure Only</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300">mbar</span>
+                </button>
+                <button onclick="setIsolationMode('temperature')" data-mode="temperature" class="iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700/80 flex items-center gap-1.5">
+                    <span>🌡️ Temperature Only</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">°C / °F</span>
+                </button>
+                <button onclick="setIsolationMode('mineralogy')" data-mode="mineralogy" class="iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700/80 flex items-center gap-1.5">
+                    <span>🪨 Mineralogy & Geology Only</span>
+                </button>
+                <button onclick="setIsolationMode('topography')" data-mode="topography" class="iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700/80 flex items-center gap-1.5">
+                    <span>⛰️ Topography & Slope Only</span>
+                </button>
+                <button onclick="setIsolationMode('radiation')" data-mode="radiation" class="iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700/80 flex items-center gap-1.5">
+                    <span>☢️ Radiation & UV Flux Only</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Explorer Split Grid: Left Controls & Ranked Matches | Right Interactive Map -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            <!-- Left Column (5 cols): Search, Custom Sliders & Exact Location Match Cards -->
+            <div class="lg:col-span-5 flex flex-col bg-[#0A101D] border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl max-h-[760px]">
+                
+                <!-- Search & Custom Weight Sliders -->
+                <div class="p-4 border-b border-slate-800/90 space-y-3.5 bg-[#0D1526]">
+                    <div class="relative">
+                        <input type="text" id="site-search" oninput="renderExplorer()" placeholder="Search site, country, mineral, or pressure..." class="w-full bg-[#060A12] border border-slate-700/80 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                        <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+
+                    <!-- Biome Filter Pills -->
+                    <div class="flex flex-wrap gap-1.5" id="biome-filter-group">
+                        <label class="cursor-pointer">
+                            <input type="checkbox" value="Hyper-Arid Desert" checked onchange="renderExplorer()" class="peer sr-only">
+                            <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900 text-slate-400 border border-slate-800 peer-checked:bg-blue-500/15 peer-checked:text-blue-300 peer-checked:border-blue-500/40 transition-all">Hyper-Arid</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="checkbox" value="High-Altitude Plateau" checked onchange="renderExplorer()" class="peer sr-only">
+                            <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900 text-slate-400 border border-slate-800 peer-checked:bg-blue-500/15 peer-checked:text-blue-300 peer-checked:border-blue-500/40 transition-all">High-Altitude / Low Pressure</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="checkbox" value="Polar / Permafrost" checked onchange="renderExplorer()" class="peer sr-only">
+                            <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900 text-slate-400 border border-slate-800 peer-checked:bg-blue-500/15 peer-checked:text-blue-300 peer-checked:border-blue-500/40 transition-all">Polar / Ice</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="checkbox" value="Volcanic / Basalt" checked onchange="renderExplorer()" class="peer sr-only">
+                            <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900 text-slate-400 border border-slate-800 peer-checked:bg-blue-500/15 peer-checked:text-blue-300 peer-checked:border-blue-500/40 transition-all">Volcanic / Basalt</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="checkbox" value="Lava Tubes / Caves" checked onchange="renderExplorer()" class="peer sr-only">
+                            <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-900 text-slate-400 border border-slate-800 peer-checked:bg-blue-500/15 peer-checked:text-blue-300 peer-checked:border-blue-500/40 transition-all">Lava Tubes</span>
+                        </label>
+                    </div>
+
+                    <!-- Custom Multi-Parameter Weight Sliders (Auto-dimmed when Single Parameter is Isolated) -->
+                    <div id="weight-sliders-panel" class="grid grid-cols-3 gap-3 pt-1 transition-opacity duration-200">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                                <span>PRESSURE</span>
+                                <span id="lbl-w-pressure" class="text-blue-400">85%</span>
+                            </div>
+                            <input type="range" id="w-pressure" min="0" max="100" value="85" oninput="renderExplorer()" class="w-full">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                                <span>MINERAL</span>
+                                <span id="lbl-w-mineral" class="text-blue-400">90%</span>
+                            </div>
+                            <input type="range" id="w-mineral" min="0" max="100" value="90" oninput="renderExplorer()" class="w-full">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                                <span>THERMAL</span>
+                                <span id="lbl-w-thermal" class="text-blue-400">80%</span>
+                            </div>
+                            <input type="range" id="w-thermal" min="0" max="100" value="80" oninput="renderExplorer()" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranked Results Count Bar -->
+                <div class="px-4 py-2.5 bg-[#070B14] border-b border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
+                    <span class="text-slate-400">MATCHING LOCATIONS: <strong id="result-count" class="text-white">10</strong></span>
+                    <span id="ranking-metric-header" class="text-blue-400">SORTED BY: OVERALL ANALOG %</span>
+                </div>
+
+                <!-- Scrollable Ranked Site Cards -->
+                <div id="ranked-sites-container" class="flex-1 overflow-y-auto p-3.5 space-y-2.5">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <!-- Right Column (7 cols): Interactive Global Telemetry Map + Active Location Telemetry Strip -->
+            <div class="lg:col-span-7 flex flex-col bg-[#0A101D] border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl min-h-[540px]">
+                
+                <!-- Top Map Telemetry Bar -->
+                <div class="p-3.5 sm:px-5 bg-[#0D1526] border-b border-slate-800/90 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30">SELECTED ANALOG LOCATION</span>
+                            <span id="map-selected-coords" class="text-xs font-mono text-slate-400">23.0234° S, 67.7538° W</span>
+                        </div>
+                        <h3 id="map-selected-title" class="font-display font-semibold text-base sm:text-lg text-white mt-0.5">Chajnantor Plateau / Atacama Core, Chile</h3>
+                    </div>
+
+                    <div class="flex items-center gap-2.5">
+                        <div class="text-right">
+                            <div id="map-selected-metric-label" class="text-[10px] font-mono uppercase text-slate-400">Mars Analog Match</div>
+                            <div id="map-selected-score" class="font-display font-bold text-xl sm:text-2xl text-blue-400">94.8%</div>
+                        </div>
+                        <button onclick="scrollToExpeditionHUD()" class="btn-orbital-blue px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5">
+                            <span>Inspect in 3D HUD</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Exact Parameter Comparison Readout Strip -->
+                <div id="exact-parameter-banner" class="px-4 py-2.5 bg-blue-950/35 border-b border-blue-500/20 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono text-blue-300 font-semibold">EXACT TELEMETRY:</span>
+                        <span id="exact-parameter-detail" class="text-slate-200">Earth Site: 550 mbar vs Mars Target: 6.1 mbar (Lowest accessible terrestrial plateau pressure)</span>
+                    </div>
+                    <span id="exact-site-elev" class="font-mono text-[11px] text-slate-400">Elev: 5,058 m</span>
+                </div>
+
+                <!-- Leaflet Interactive Map Container -->
+                <div class="relative flex-1 w-full min-h-[400px]">
+                    <div id="explorerMap" class="w-full h-full z-10"></div>
+
+                    <!-- Floating Map Layer Controls -->
+                    <div class="absolute top-3 right-3 z-20 flex bg-[#080D17]/90 backdrop-blur border border-slate-700/80 rounded-xl p-1 shadow-xl">
+                        <button id="map-style-dark" onclick="switchMapTiles('dark')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-600 text-white">Dark Telemetry</button>
+                        <button id="map-style-sat" onclick="switchMapTiles('sat')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white">Satellite</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 3: COSMO™ EXPEDITION 3D/2D FIELD TELEMETRY HUD (DESIGN 2)     -->
+    <!-- ===================================================================== -->
+    <section id="expedition-hud" class="py-10 sm:py-16 px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+        
+        <!-- Section Intro Label -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 px-1">
+            <div>
+                <div class="text-xs font-mono uppercase tracking-widest text-amber-400/90 mb-1">STEP 02 // COSMO™ SURFACE TELEMETRY & GEOLOGICAL SCANNER</div>
+                <h2 class="font-display text-xl sm:text-2xl font-semibold text-white">Interactive Field Expedition HUD</h2>
+            </div>
+            <p class="text-xs text-slate-400">Real-time surface sensor telemetry, 3D wireframe terrain projection, and downloadable NASA analog dossier.</p>
+        </div>
+
+        <!-- COSMO™ FROSTED GLASS EXPEDITION VIEWPORT (Matches Reference Image 2) -->
+        <div class="relative w-full rounded-[28px] sm:rounded-[34px] overflow-hidden border border-white/15 shadow-[0_25px_90px_rgba(0,0,0,0.75)] text-[#231915]" style="background: linear-gradient(180deg, #F3EAE3 0%, #E7D8CE 34%, #C79F84 64%, #7A4B35 100%);">
+            
+            <!-- Procedural Martian/Analog Desert Horizon & Scanned Boulder Canvas -->
+            <canvas id="cosmoTerrainCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+            <!-- HUD Foreground Content Layer -->
+            <div class="relative z-10 flex flex-col justify-between min-h-[780px] lg:min-h-[820px] p-4 sm:p-6 lg:p-8">
+                
+                <!-- 1. COSMO™ Top Navigation Header -->
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <!-- Left Brand Mark -->
+                    <div class="flex items-center gap-2.5">
+                        <div class="grid grid-cols-2 gap-0.5 w-4 h-4">
+                            <span class="bg-[#231915] rounded-[1px]"></span>
+                            <span class="bg-transparent"></span>
+                            <span class="bg-[#231915] rounded-[1px]"></span>
+                            <span class="bg-[#231915] rounded-[1px]"></span>
+                        </div>
+                        <span class="font-display font-bold text-base tracking-tight text-[#231915]">COSMO<sup class="text-[9px] font-semibold">™</sup></span>
+                    </div>
+
+                    <!-- Center Sub-Navigation Tabs -->
+                    <div class="flex items-center gap-5 sm:gap-8 text-xs font-medium text-[#231915]/80">
+                        <button onclick="setHudTab('overview')" id="hud-tab-overview" class="font-semibold text-[#231915] border-b-2 border-[#231915] pb-1 transition-all">Overview</button>
+                        <button onclick="setHudTab('matrix')" id="hud-tab-matrix" class="hover:text-[#231915] pb-1 transition-all">Parameter Matrix</button>
+                        <button onclick="setHudTab('mission')" id="hud-tab-mission" class="hover:text-[#231915] pb-1 transition-all">NASA Mission Notes</button>
+                    </div>
+
+                    <!-- Right Live Telemetry Status & Investigator Avatar -->
+                    <div class="flex items-center gap-3">
+                        <span id="hud-upd-stamp" class="text-[11px] font-mono text-[#231915]/70">UPD: LIVE • NASA DATA</span>
+                        <div class="w-8 h-8 rounded-full bg-white/65 border border-[#231915]/15 flex items-center justify-center shadow-sm">
+                            <svg class="w-4 h-4 text-[#231915]" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                            </svg>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-[#231915] text-[#F3EAE3] font-mono text-[11px] font-bold flex items-center justify-center relative shadow-sm">
+                            <span>SC</span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#F3EAE3] absolute -bottom-0.5 -right-0.5"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Main HUD Grid: Left Telemetry Column | Center Zone Title & 3D/2D Toggle | Right Analysis Column -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 my-auto pt-5">
+                    
+                    <!-- LEFT COLUMN (3 cols): Top 2 Metric Boxes + Solar Activity Card + 3D Projection Card -->
+                    <div class="lg:col-span-3 flex flex-col gap-3.5">
+                        
+                        <!-- Top 2 Metric Boxes (Wind Speed & Day Temperature) -->
+                        <div class="grid grid-cols-2 rounded-2xl cosmo-hud-topbox overflow-hidden">
+                            <div class="p-3.5 sm:p-4 border-r border-[#231915]/10">
+                                <div class="flex items-baseline gap-1">
+                                    <span id="hud-wind" class="font-display text-2xl sm:text-3xl font-medium text-[#231915]">36</span>
+                                    <span class="text-[10px] font-mono uppercase text-[#231915]/70">KM/H</span>
+                                </div>
+                                <div class="text-[11px] text-[#231915]/65 mt-1">Wind Speed</div>
+                            </div>
+                            <div class="p-3.5 sm:p-4">
+                                <div class="flex items-baseline gap-1">
+                                    <span id="hud-temp" class="font-display text-2xl sm:text-3xl font-medium text-[#231915]">-18</span>
+                                    <span class="text-[10px] font-mono text-[#231915]/70">°F</span>
+                                </div>
+                                <div class="text-[11px] text-[#231915]/65 mt-1">Day Temperature</div>
+                            </div>
+                        </div>
+
+                        <!-- Solar & Atmospheric Activity Card -->
+                        <div class="cosmo-hud-card rounded-2xl p-4 sm:p-5 text-white relative">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h4 class="font-medium text-sm text-[#231915]">Atmospheric & Solar</h4>
+                                    <p id="hud-pressure-sub" class="text-[11px] font-mono text-[#231915]/70 mt-0.5">Pressure: 550 mbar</p>
+                                </div>
+                                <span class="text-[#231915]/80 text-xs">▲</span>
+                            </div>
+
+                            <!-- Glowing Radial Sun/Pressure Ring -->
+                            <div class="relative flex items-center justify-center my-5">
+                                <!-- Outer Dashed Orbit Ring -->
+                                <div class="w-32 h-32 rounded-full border border-dashed border-white/45 flex items-center justify-center relative">
+                                    <!-- Glowing Orange Core -->
+                                    <div class="w-20 h-20 rounded-full flex flex-col items-center justify-center text-center shadow-[0_0_35px_rgba(249,115,22,0.85)]" style="background: radial-gradient(circle, #FB923C 0%, #EA580C 75%, #C2410C 100%);">
+                                        <span id="hud-flux-pct" class="font-display font-bold text-base text-white leading-none">56%</span>
+                                        <span class="text-[9px] text-orange-100 mt-0.5">UV / flux</span>
+                                    </div>
+
+                                    <!-- Floating Micro Badges -->
+                                    <span id="hud-flux-badge" class="absolute -top-1 right-0 px-2 py-0.5 rounded-full bg-white text-[#231915] font-mono text-[10px] font-semibold shadow">High</span>
+                                    <span id="hud-rad-pill" class="absolute bottom-1 -left-2 px-2 py-0.5 rounded-full bg-white text-[#231915] font-mono text-[10px] font-semibold shadow">+0.7 μSv</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3D Projection Wireframe Card -->
+                        <div class="cosmo-hud-card rounded-2xl p-4 sm:p-5 text-white flex-1 flex flex-col justify-between min-h-[185px]">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-sm text-white/95">3D Projection</h4>
+                                <span class="text-white/70 text-xs font-mono">•••</span>
+                            </div>
+                            <div class="relative w-full h-32">
+                                <canvas id="wireframeProjectionCanvas" class="w-full h-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CENTER COLUMN (6 cols): Expedition Badge, Site Zone Title, Interactive Centerpiece & 3D/2D Switch -->
+                    <div class="lg:col-span-6 flex flex-col items-center justify-between text-center py-2 sm:py-4">
+                        
+                        <!-- Zone Title Header -->
+                        <div class="mt-1 sm:mt-2">
+                            <span id="hud-expedition-pill" class="inline-block px-3.5 py-1 rounded-full bg-white/80 backdrop-blur text-[#231915] text-[11px] font-medium shadow-sm mb-3">
+                                Expedition • Mars Analog
+                            </span>
+                            <h3 id="hud-zone-title" class="font-display text-3xl sm:text-4xl lg:text-[42px] font-normal tracking-tight text-[#231915] uppercase leading-[1.08]">
+                                CHAJNANTOR /<br>ATACAMA CORE
+                            </h3>
+                            <p id="hud-zone-coords" class="font-mono text-xs text-[#231915]/75 mt-2">
+                                23.0234° S, 67.7538° W • ELEVATION 5,058 M
+                            </p>
+                        </div>
+
+                        <!-- Dynamic Tab Overlay Panel (Visible when Parameter Matrix or Mission Notes tab is active) -->
+                        <div id="hud-center-overlay-card" class="hidden w-full max-w-lg cosmo-hud-card rounded-2xl p-5 text-left text-white my-4 shadow-2xl">
+                            <!-- Injected dynamically when switching HUD tabs -->
+                        </div>
+
+                        <!-- Bottom Center 3D / 2D Toggle Switch & Interactive Scan Hint -->
+                        <div class="mt-auto pt-44 lg:pt-56 flex flex-col items-center gap-3">
+                            <div class="inline-flex items-center bg-black/35 backdrop-blur-md p-1 rounded-full border border-white/25 shadow-lg">
+                                <button id="btn-hud-3d" onclick="setScanDimension('3D')" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-[#231915] shadow transition-all">3D</button>
+                                <button id="btn-hud-2d" onclick="setScanDimension('2D')" class="px-4 py-1.5 rounded-full text-xs font-semibold text-white/85 hover:text-white transition-all">2D</button>
+                            </div>
+                            <span class="text-[11px] font-mono text-white/80 bg-black/25 backdrop-blur-sm px-3 py-1 rounded-full">
+                                Drag across terrain specimen to rotate 3D laser mesh
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN (3 cols): Top 2 Metric Boxes + Structure/Composition Histogram + Analog Ratio Gauge -->
+                    <div class="lg:col-span-3 flex flex-col gap-3.5">
+                        
+                        <!-- Top 2 Metric Boxes (Radiation & Analog Purity %) -->
+                        <div class="grid grid-cols-2 rounded-2xl cosmo-hud-topbox overflow-hidden">
+                            <div class="p-3.5 sm:p-4 border-r border-[#231915]/10">
+                                <div class="flex items-baseline gap-1">
+                                    <span id="hud-radiation" class="font-display text-2xl sm:text-3xl font-medium text-[#231915]">0.7</span>
+                                    <span class="text-[10px] font-mono text-[#231915]/70">μSv</span>
+                                </div>
+                                <div class="text-[11px] text-[#231915]/65 mt-1">Radiation</div>
+                            </div>
+                            <div class="p-3.5 sm:p-4">
+                                <div class="flex items-baseline gap-1">
+                                    <span id="hud-purity" class="font-display text-2xl sm:text-3xl font-medium text-[#231915]">95</span>
+                                    <span class="text-[10px] font-mono text-[#231915]/70">%</span>
+                                </div>
+                                <div id="hud-purity-label" class="text-[11px] text-[#231915]/65 mt-1 truncate">Analog Match</div>
+                            </div>
+                        </div>
+
+                        <!-- View Card (Structure / Composition Histogram) -->
+                        <div class="cosmo-hud-card rounded-2xl p-4 sm:p-5 text-white">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-medium text-sm text-[#231915]">View</h4>
+                                <span class="text-[#231915]/70 text-xs font-mono">•••</span>
+                            </div>
+
+                            <!-- Segmented Pill Toggle -->
+                            <div class="grid grid-cols-2 bg-white/30 p-1 rounded-full border border-white/30 mb-4">
+                                <button id="btn-view-structure" onclick="setHistogramMode('structure')" class="py-1 rounded-full text-xs font-medium bg-[#2B1D16] text-white shadow transition-all">Structure</button>
+                                <button id="btn-view-composition" onclick="setHistogramMode('composition')" class="py-1 rounded-full text-xs font-medium text-[#231915]/80 hover:text-[#231915] transition-all">Composition</button>
+                            </div>
+
+                            <!-- Spectral Bar Histogram Canvas -->
+                            <div class="w-full h-20 mb-3">
+                                <canvas id="histogramCanvas" class="w-full h-full"></canvas>
+                            </div>
+
+                            <!-- Min / Current / Max Density or Pressure Readouts -->
+                            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/20 text-left">
+                                <div>
+                                    <div id="hist-lbl-min" class="text-[10px] text-white/70">Min</div>
+                                    <div id="hist-val-min" class="font-mono text-xs font-semibold text-white mt-0.5">1.2 g/cm³</div>
+                                </div>
+                                <div>
+                                    <div id="hist-lbl-cur" class="text-[10px] text-white/70">Current</div>
+                                    <div id="hist-val-cur" class="font-mono text-xs font-semibold text-white mt-0.5">3.4 g/cm³</div>
+                                </div>
+                                <div>
+                                    <div id="hist-lbl-max" class="text-[10px] text-white/70">Max</div>
+                                    <div id="hist-val-max" class="font-mono text-xs font-semibold text-white mt-0.5">7.9 g/cm³</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mineral & Analog Ratio Gauge Card -->
+                        <div class="cosmo-hud-card rounded-2xl p-4 sm:p-5 text-white flex-1 flex flex-col justify-between">
+                            <div class="flex items-center justify-between">
+                                <h4 id="gauge-card-title" class="font-medium text-sm text-white/95">Analog Match Ratio</h4>
+                                <span id="gauge-mode-tag" class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/15 text-white">ALL PARAMS</span>
+                            </div>
+
+                            <!-- Semi-Circular Arc Gauge -->
+                            <div class="relative flex flex-col items-center justify-center my-2">
+                                <canvas id="ratioGaugeCanvas" width="210" height="110" class="max-w-full"></canvas>
+                                <div class="absolute bottom-2 px-3.5 py-1 rounded-full bg-white text-[#231915] font-display font-bold text-sm shadow">
+                                    <span id="gauge-center-pct">95%</span>
+                                </div>
+                            </div>
+
+                            <!-- Mineral / Telemetry Legend Dots -->
+                            <div class="flex items-center justify-center gap-4 text-[11px] font-mono text-white/90 mb-3">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-white"></span>
+                                    <span id="legend-item-1">Fe₂O₃ Basalt</span>
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                    <span id="legend-item-2">MgCO₃ / Regolith</span>
+                                </span>
+                            </div>
+
+                            <!-- Generate NASA Mission Report Button -->
+                            <button onclick="downloadMissionReport()" class="w-full py-2.5 px-4 rounded-xl bg-white/25 hover:bg-white/35 border border-white/35 text-xs font-semibold text-white tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                                <span>Generate Report</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- SECTION 4: OPEN NASA DATA METHODOLOGY & PIPELINE FOOTER               -->
+    <!-- ===================================================================== -->
+    <section class="py-12 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto border-t border-slate-800/80">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-[#0A101D] border border-slate-800/80 rounded-2xl p-5">
+                <div class="text-[11px] font-mono text-blue-400 mb-1.5">01 // NASA EARTHDATA & SRTM</div>
+                <h4 class="font-display font-semibold text-base text-white mb-2">Terrestrial Atmospheric & DEM Telemetry</h4>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Ingests 30m Shuttle Radar Topography Mission (SRTM) slope models, MODIS land surface temperature swings, barometric altitude pressure curves, and ASTER mineral spectroscopy.
+                </p>
+            </div>
+            <div class="bg-[#0A101D] border border-slate-800/80 rounded-2xl p-5">
+                <div class="text-[11px] font-mono text-amber-400 mb-1.5">02 // LRO & MRO ORBITAL BASELINES</div>
+                <h4 class="font-display font-semibold text-base text-white mb-2">Moon South Pole & Martian Targets</h4>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Benchmarks terrestrial locations directly against Lunar Reconnaissance Orbiter (LOLA/Diviner) Shackleton Rim data and Mars Reconnaissance Orbiter (HiRISE/CRISM) Jezero Crater datasets.
+                </p>
+            </div>
+            <div class="bg-[#0A101D] border border-slate-800/80 rounded-2xl p-5">
+                <div class="text-[11px] font-mono text-emerald-400 mb-1.5">03 // PARAMETER ISOLATION ALGORITHM</div>
+                <h4 class="font-display font-semibold text-base text-white mb-2">Single-Variable & Multi-Axis Scoring</h4>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Allows mission planners to isolate individual test requirements—such as low barometric pressure for rover aerodynamics or cryogenic regolith for Artemis EVA drills—yielding exact coordinates and match ratios.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- CUSTOM COORDINATE & PARAMETER ANALYZER MODAL                          -->
+    <!-- ===================================================================== -->
+    <div id="customSiteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-[#0B1120] border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="font-display font-bold text-lg text-white">Add Custom Earth Analog Location</h3>
+                    <p class="text-xs text-slate-400">Evaluate any field site against Mars & Moon baselines</p>
+                </div>
+                <button onclick="toggleCustomModal()" class="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onsubmit="submitCustomSite(event)" class="space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Site Name</label>
+                        <input type="text" id="cust-name" required placeholder="e.g., Mount Popa Caldera" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Country / Region</label>
+                        <input type="text" id="cust-country" required placeholder="e.g., Myanmar" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Latitude (°)</label>
+                        <input type="number" step="any" id="cust-lat" required value="20.92" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Longitude (°)</label>
+                        <input type="number" step="any" id="cust-lng" required value="95.25" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Pressure (mbar)</label>
+                        <input type="number" step="any" id="cust-pressure" required value="845" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Mean Temp (°C)</label>
+                        <input type="number" step="any" id="cust-temp" required value="24" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-mono text-slate-400 mb-1">Terrain Biome</label>
+                        <select id="cust-biome" class="w-full bg-[#060A12] border border-slate-700 rounded-xl px-3 py-2 text-white">
+                            <option value="Volcanic / Basalt">Volcanic / Basalt</option>
+                            <option value="Hyper-Arid Desert">Hyper-Arid Desert</option>
+                            <option value="High-Altitude Plateau">High-Altitude Plateau</option>
+                            <option value="Polar / Permafrost">Polar / Permafrost</option>
+                            <option value="Lava Tubes / Caves">Lava Tubes / Caves</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="toggleCustomModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-medium">Cancel</button>
+                    <button type="submit" class="btn-orbital-blue px-5 py-2 rounded-xl text-white font-semibold">Compute Analog & Plot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- APPLICATION JAVASCRIPT ENGINE                                         -->
+    <!-- ===================================================================== -->
+    <script>
+        // -------------------------------------------------------------------
+        // 1. SCIENTIFIC PLANETARY TARGET BASELINES (MARS VS MOON)
+        // -------------------------------------------------------------------
+        const planetaryBaselines = {
+            mars: {
+                id: 'mars',
+                label: 'Mars (Jezero Crater / Hellas Planitia)',
+                shortName: 'Mars Analog',
+                pressureMbar: 6.1,
+                tempC: -63,
+                radiationUSv: 28.0,
+                // Normalized indices [pressureSim, tempSim, mineralSim, topoSim, radSim]
+                targetIndices: [98, 95, 94, 88, 92],
+                accentColor: '#EF4444'
+            },
+            moon: {
+                id: 'moon',
+                label: 'Moon Base (Artemis Lunar South Pole)',
+                shortName: 'Lunar Base Analog',
+                pressureMbar: 0.0,
+                tempC: -130,
+                radiationUSv: 65.0,
+                targetIndices: [100, 98, 92, 95, 98],
+                accentColor: '#F59E0B'
+            }
+        };
+
+        // -------------------------------------------------------------------
+        // 2. EARTH ANALOG SITES DATASET (WITH REALISTIC TELEMETRY)
+        // -------------------------------------------------------------------
+        const earthSites = [
+            {
+                id: 'chajnantor-atacama',
+                name: 'Chajnantor Plateau / Atacama Core',
+                hudTitle: 'CHAJNANTOR /<br>ATACAMA CORE',
+                country: 'Chile',
+                lat: -23.0234,
+                lng: -67.7538,
+                elevation: '5,058 m',
+                biome: 'High-Altitude Plateau',
+                pressureMbar: 550, // ~54% of sea level — extreme low-pressure Mars testbed
+                tempC: -4,
+                windKmh: 42,
+                radiationUSv: 0.82,
+                fluxPct: 68,
+                fluxStatus: 'High UV',
+                densityMin: '1.4 g/cm³',
+                densityCur: '3.1 g/cm³',
+                densityMax: '6.8 g/cm³',
+                mineral1: 'Fe₂O₃ Andesite',
+                mineral2: 'Sulfate Crust',
+                // Individual parameter analog scores vs Mars & Moon (0-100)
+                marsScores: { pressure: 94.6, temperature: 84.2, mineralogy: 95.0, topography: 89.5, radiation: 91.0 },
+                moonScores: { pressure: 93.8, temperature: 81.0, mineralogy: 84.0, topography: 86.0, radiation: 89.5 },
+                missionNotes: 'At 5,058 m elevation with hyper-arid sulfate soils and ~550 mbar atmospheric pressure, Chajnantor offers the closest accessible terrestrial combination of low barometric pressure, high UV flux, and Mars-like regolith chemistry.'
+            },
+            {
+                id: 'mauna-kea',
+                name: 'Mauna Kea Summit Tephra Field',
+                hudTitle: 'MAUNA KEA /<br>SUMMIT ZONE',
+                country: 'Hawaii, USA',
+                lat: 19.8207,
+                lng: -155.4681,
+                elevation: '4,207 m',
+                biome: 'Volcanic / Basalt',
+                pressureMbar: 614,
+                tempC: 2,
+                windKmh: 38,
+                radiationUSv: 0.74,
+                fluxPct: 64,
+                fluxStatus: 'Elevated',
+                densityMin: '1.2 g/cm³',
+                densityCur: '2.9 g/cm³',
+                densityMax: '7.4 g/cm³',
+                mineral1: 'Olivine Basalt',
+                mineral2: 'Palagonite',
+                marsScores: { pressure: 91.2, temperature: 79.5, mineralogy: 97.4, topography: 92.0, radiation: 88.4 },
+                moonScores: { pressure: 90.4, temperature: 76.0, mineralogy: 94.8, topography: 91.2, radiation: 86.0 },
+                missionNotes: 'Used by NASA PISCES for lunar and Martian ISRU regolith excavation. Low 614 mbar barometric pressure and unweathered basaltic tephra closely simulate both Lunar Mare and Martian volcanic plains.'
+            },
+            {
+                id: 'mcmurdo-valleys',
+                name: 'McMurdo Dry Valleys (Beacon Valley)',
+                hudTitle: 'MCMURDO /<br>BEACON VALLEY',
+                country: 'Antarctica',
+                lat: -77.8333,
+                lng: 160.6500,
+                elevation: '1,350 m',
+                biome: 'Polar / Permafrost',
+                pressureMbar: 835,
+                tempC: -28,
+                windKmh: 54,
+                radiationUSv: 0.68,
+                fluxPct: 52,
+                fluxStatus: 'Polar Flux',
+                densityMin: '1.1 g/cm³',
+                densityCur: '2.6 g/cm³',
+                densityMax: '6.2 g/cm³',
+                mineral1: 'Dolerite Till',
+                mineral2: 'Subsurface Ice',
+                marsScores: { pressure: 78.4, temperature: 96.5, mineralogy: 88.0, topography: 87.0, radiation: 84.5 },
+                moonScores: { pressure: 77.2, temperature: 94.8, mineralogy: 83.5, topography: 88.5, radiation: 82.0 },
+                missionNotes: 'Coldest, driest permafrost analog on Earth. Sublimation-dominated ice tables beneath dry basaltic till mirror Martian northern latitudes and Lunar South Pole permanently shadowed regolith.'
+            },
+            {
+                id: 'haughton-crater',
+                name: 'Haughton Impact Crater (Devon Island)',
+                hudTitle: 'HAUGHTON /<br>CRATER RIM',
+                country: 'Nunavut, Canada',
+                lat: 75.3833,
+                lng: -89.6833,
+                elevation: '250 m',
+                biome: 'Polar / Permafrost',
+                pressureMbar: 985,
+                tempC: -19,
+                windKmh: 36,
+                radiationUSv: 0.70,
+                fluxPct: 56,
+                fluxStatus: 'High',
+                densityMin: '1.2 g/cm³',
+                densityCur: '3.4 g/cm³',
+                densityMax: '7.9 g/cm³',
+                mineral1: 'Impact Breccia',
+                mineral2: 'MgCO₃ Dolomite',
+                marsScores: { pressure: 69.5, temperature: 92.8, mineralogy: 91.5, topography: 96.4, radiation: 81.0 },
+                moonScores: { pressure: 68.0, temperature: 91.0, mineralogy: 89.2, topography: 97.2, radiation: 80.5 },
+                missionNotes: 'A 23-km preserved impact structure in the High Arctic. Ranked #1 for crater ejecta topography and NASA Haughton-Mars Project EVA spacesuit and rover navigation testing.'
+            },
+            {
+                id: 'qaidam-basin',
+                name: 'Qaidam Hyper-Arid Playa Basin',
+                hudTitle: 'QAIDAM /<br>YARDANG ZONE',
+                country: 'Qinghai, China',
+                lat: 37.8500,
+                lng: 95.3000,
+                elevation: '3,100 m',
+                biome: 'High-Altitude Plateau',
+                pressureMbar: 695,
+                tempC: -2,
+                windKmh: 46,
+                radiationUSv: 0.76,
+                fluxPct: 61,
+                fluxStatus: 'Elevated',
+                densityMin: '1.5 g/cm³',
+                densityCur: '3.0 g/cm³',
+                densityMax: '6.5 g/cm³',
+                mineral1: 'Magnesium Sulfate',
+                mineral2: 'Aeolian Silt',
+                marsScores: { pressure: 87.5, temperature: 82.0, mineralogy: 93.4, topography: 91.8, radiation: 87.0 },
+                moonScores: { pressure: 86.4, temperature: 78.5, mineralogy: 80.2, topography: 84.0, radiation: 85.0 },
+                missionNotes: 'High-elevation evaporite desert at 3,100 m featuring wind-carved yardangs, magnesium sulfates, and ~695 mbar atmospheric pressure closely matching Gale and Jezero paleo-lakebeds.'
+            },
+            {
+                id: 'craters-moon-idaho',
+                name: 'Craters of the Moon Lava Tubes',
+                hudTitle: 'ARCO RIFT /<br>LAVA SKYLIGHT',
+                country: 'Idaho, USA',
+                lat: 43.4167,
+                lng: -113.5167,
+                elevation: '1,800 m',
+                biome: 'Lava Tubes / Caves',
+                pressureMbar: 815,
+                tempC: 4,
+                windKmh: 29,
+                radiationUSv: 0.58,
+                fluxPct: 48,
+                fluxStatus: 'Moderate',
+                densityMin: '1.3 g/cm³',
+                densityCur: '3.2 g/cm³',
+                densityMax: '7.6 g/cm³',
+                mineral1: 'Vesicular Basalt',
+                mineral2: 'Subsurface Ice',
+                marsScores: { pressure: 80.2, temperature: 76.4, mineralogy: 92.5, topography: 94.0, radiation: 79.5 },
+                moonScores: { pressure: 79.1, temperature: 75.0, mineralogy: 93.6, topography: 96.8, radiation: 78.0 },
+                missionNotes: 'Intact basaltic lava tubes with skylight collapses and perennial cave ice—directly modeling Lunar Mare Tranquillitatis pits and Martian Arsia Mons radiation-shielded habitat caves.'
+            },
+            {
+                id: 'rio-tinto',
+                name: 'Río Tinto Acidic Iron-Sulfate Basin',
+                hudTitle: 'RÍO TINTO /<br>GOSSAN RIDGE',
+                country: 'Andalusia, Spain',
+                lat: 37.7022,
+                lng: -6.5514,
+                elevation: '410 m',
+                biome: 'Hyper-Arid Desert',
+                pressureMbar: 968,
+                tempC: 17,
+                windKmh: 24,
+                radiationUSv: 0.52,
+                fluxPct: 44,
+                fluxStatus: 'Nominal',
+                densityMin: '1.8 g/cm³',
+                densityCur: '3.9 g/cm³',
+                densityMax: '8.1 g/cm³',
+                mineral1: 'Fe₂O₃ Hematite',
+                mineral2: 'Jarosite Clay',
+                marsScores: { pressure: 70.4, temperature: 71.0, mineralogy: 98.2, topography: 83.5, radiation: 74.0 },
+                moonScores: { pressure: 69.0, temperature: 68.0, mineralogy: 81.0, topography: 79.5, radiation: 72.5 },
+                missionNotes: 'World-renowned geochemical analog for Meridiani Planum and Jezero Crater due to abundant jarosite, hematite concretions, and acidic iron-oxidizing chemolithotrophic biosignatures.'
+            },
+            {
+                id: 'death-valley',
+                name: 'Death Valley (Ubehebe & Dumont Dunes)',
+                hudTitle: 'UBEHEBE /<br>MOJAVE BASIN',
+                country: 'California, USA',
+                lat: 37.0097,
+                lng: -117.4503,
+                elevation: '720 m',
+                biome: 'Hyper-Arid Desert',
+                pressureMbar: 932,
+                tempC: 25,
+                windKmh: 33,
+                radiationUSv: 0.61,
+                fluxPct: 59,
+                fluxStatus: 'High',
+                densityMin: '1.4 g/cm³',
+                densityCur: '2.8 g/cm³',
+                densityMax: '6.9 g/cm³',
+                mineral1: 'Basaltic Tephra',
+                mineral2: 'Evaporite Salt',
+                marsScores: { pressure: 72.8, temperature: 67.5, mineralogy: 89.4, topography: 90.2, radiation: 78.5 },
+                moonScores: { pressure: 71.5, temperature: 64.0, mineralogy: 86.5, topography: 87.8, radiation: 77.0 },
+                missionNotes: 'Classic NASA JPL Curiosity & Perseverance mobility testbed featuring maar explosion craters, alluvial fans, and basaltic sand dunes for autonomous wheel-slip testing.'
+            }
+        ];
+
+        // -------------------------------------------------------------------
+        // 3. APPLICATION STATE
+        // -------------------------------------------------------------------
+        let activeTarget = 'mars';          // 'mars' | 'moon'
+        let isolationMode = 'all';          // 'all' | 'pressure' | 'temperature' | 'mineralogy' | 'topography' | 'radiation'
+        let selectedSiteId = 'chajnantor-atacama';
+        let scanDimension = '3D';           // '3D' | '2D'
+        let histogramMode = 'structure';    // 'structure' | 'composition'
+        let activeHudTab = 'overview';      // 'overview' | 'matrix' | 'mission'
+        let meshRotationOffset = 0;
+
+        let explorerMap = null;
+        let mapTileLayer = null;
+        let mapMarkersGroup = null;
+
+        // -------------------------------------------------------------------
+        // 4. INITIALIZATION
+        // -------------------------------------------------------------------
+        window.onload = function() {
+            initOrbitalHeroCanvas();
+            initExplorerMap();
+            renderExplorer();
+            selectSite(selectedSiteId, false);
+            initCosmoTerrainCanvas();
+            drawWireframeProjection();
+        };
+
+        // Quick Preset Button Handler from Hero
+        function quickPreset(target, mode) {
+            setPlanetaryTarget(target);
+            setIsolationMode(mode);
+            document.getElementById('preference-explorer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function scrollToExpeditionHUD() {
+            document.getElementById('expedition-hud').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // -------------------------------------------------------------------
+        // 5. DESIGN 1: ORBITAL EARTH HORIZON CANVAS ANIMATION
+        // -------------------------------------------------------------------
+        function initOrbitalHeroCanvas() {
+            const canvas = document.getElementById('orbitalHeroCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let stars = [];
+            let shootingStars = [];
+
+            function resize() {
+                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                generateStars();
+            }
+
+            function generateStars() {
+                const w = canvas.offsetWidth;
+                const h = canvas.offsetHeight;
+                stars = Array.from({ length: 140 }, () => ({
+                    x: Math.random() * w,
+                    y: Math.random() * h * 0.75,
+                    r: Math.random() * 1.3 + 0.2,
+                    alpha: Math.random() * 0.7 + 0.2,
+                    twinkleSpeed: Math.random() * 0.02 + 0.005
+                }));
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+
+            let tick = 0;
+            function animate() {
+                tick += 1;
+                const w = canvas.offsetWidth;
+                const h = canvas.offsetHeight;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // Deep space background gradient
+                const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.95, 50, w * 0.5, h * 0.5, w * 0.9);
+                bgGrad.addColorStop(0, '#0B162C');
+                bgGrad.addColorStop(0.55, '#050914');
+                bgGrad.addColorStop(1, '#03050A');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Draw Starfield
+                stars.forEach(s => {
+                    const a = s.alpha + Math.sin(tick * s.twinkleSpeed) * 0.2;
+                    ctx.fillStyle = `rgba(226, 232, 240, ${Math.max(0.1, a)})`;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Occasional Shooting Stars
+                if (Math.random() < 0.012 && shootingStars.length < 2) {
+                    shootingStars.push({
+                        x: w * (0.65 + Math.random() * 0.3),
+                        y: h * (0.18 + Math.random() * 0.28),
+                        len: 55 + Math.random() * 45,
+                        speed: 5 + Math.random() * 3,
+                        alpha: 1
+                    });
+                }
+                shootingStars.forEach((ss, idx) => {
+                    ss.x -= ss.speed;
+                    ss.y += ss.speed * 0.65;
+                    ss.alpha -= 0.018;
+                    if (ss.alpha <= 0) {
+                        shootingStars.splice(idx, 1);
+                        return;
+                    }
+                    const grad = ctx.createLinearGradient(ss.x, ss.y, ss.x + ss.len, ss.y - ss.len * 0.65);
+                    grad.addColorStop(0, `rgba(186, 230, 253, ${ss.alpha})`);
+                    grad.addColorStop(1, 'rgba(186, 230, 253, 0)');
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(ss.x, ss.y);
+                    ctx.lineTo(ss.x + ss.len, ss.y - ss.len * 0.65);
+                    ctx.stroke();
+                });
+
+                // Orbital Earth Sphere Geometry (Positioned in lower center)
+                const earthRadius = Math.max(w * 0.34, 270);
+                const earthX = w * 0.5;
+                const earthY = h + earthRadius * 0.56;
+
+                // Outer Atmospheric Rayleigh Scattering Halo
+                const atmoGlow = ctx.createRadialGradient(earthX, earthY, earthRadius * 0.94, earthX, earthY, earthRadius * 1.13);
+                atmoGlow.addColorStop(0, 'rgba(56, 189, 248, 0.75)');
+                atmoGlow.addColorStop(0.32, 'rgba(37, 99, 235, 0.38)');
+                atmoGlow.addColorStop(0.7, 'rgba(29, 78, 216, 0.09)');
+                atmoGlow.addColorStop(1, 'rgba(4, 7, 13, 0)');
+                ctx.fillStyle = atmoGlow;
+                ctx.beginPath();
+                ctx.arc(earthX, earthY, earthRadius * 1.13, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Clip inside Earth Globe
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(earthX, earthY, earthRadius, 0, Math.PI * 2);
+                ctx.clip();
+
+                // Base Ocean & Terminator Shading
+                const globeGrad = ctx.createRadialGradient(
+                    earthX + earthRadius * 0.25, earthY - earthRadius * 0.85, earthRadius * 0.1,
+                    earthX - earthRadius * 0.1, earthY - earthRadius * 0.35, earthRadius * 1.05
+                );
+                globeGrad.addColorStop(0, '#38BDF8');
+                globeGrad.addColorStop(0.28, '#1D4ED8');
+                globeGrad.addColorStop(0.62, '#0B1938');
+                globeGrad.addColorStop(1, '#03060E');
+                ctx.fillStyle = globeGrad;
+                ctx.fillRect(earthX - earthRadius, earthY - earthRadius, earthRadius * 2, earthRadius * 2);
+
+                // Sunlit Continental Landmasses (Arid Desert + Mountain Relief Tone)
+                const drift = Math.sin(tick * 0.002) * 8;
+                ctx.fillStyle = 'rgba(180, 125, 82, 0.58)';
+                ctx.beginPath();
+                ctx.ellipse(earthX - 35 + drift, earthY - earthRadius * 0.74, earthRadius * 0.34, earthRadius * 0.16, -0.18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(120, 88, 62, 0.45)';
+                ctx.beginPath();
+                ctx.ellipse(earthX + 95 + drift, earthY - earthRadius * 0.66, earthRadius * 0.24, earthRadius * 0.12, 0.22, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Night-side Golden City Light Clusters near top-left terminator
+                ctx.fillStyle = 'rgba(253, 224, 71, 0.65)';
+                const cityOffsets = [[-90, -0.82], [-72, -0.85], [-55, -0.81], [-110, -0.77], [-40, -0.86], [-80, -0.78]];
+                cityOffsets.forEach(([ox, oy]) => {
+                    ctx.beginPath();
+                    ctx.arc(earthX + ox + drift * 0.5, earthY + earthRadius * oy, 1.4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Atmospheric Cloud Swirls
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(earthX + 40 + drift, earthY - earthRadius * 0.52, earthRadius * 0.42, Math.PI * 1.15, Math.PI * 1.68);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(224, 242, 254, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(earthX - 60 + drift, earthY - earthRadius * 0.58, earthRadius * 0.36, Math.PI * 1.25, Math.PI * 1.75);
+                ctx.stroke();
+
+                // Crisp Inner Limb Rim Highlight
+                const rimGrad = ctx.createRadialGradient(earthX, earthY, earthRadius * 0.965, earthX, earthY, earthRadius);
+                rimGrad.addColorStop(0, 'rgba(125, 211, 252, 0)');
+                rimGrad.addColorStop(0.7, 'rgba(125, 211, 252, 0.55)');
+                rimGrad.addColorStop(1, 'rgba(224, 242, 254, 0.95)');
+                ctx.fillStyle = rimGrad;
+                ctx.fillRect(earthX - earthRadius, earthY - earthRadius, earthRadius * 2, earthRadius * 2);
+
+                ctx.restore();
+
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // -------------------------------------------------------------------
+        // 6. SCIENTIST PREFERENCE & PARAMETER ISOLATION ENGINE
+        // -------------------------------------------------------------------
+        function setPlanetaryTarget(target) {
+            activeTarget = target;
+            const btnMars = document.getElementById('target-btn-mars');
+            const btnMoon = document.getElementById('target-btn-moon');
+
+            if (target === 'mars') {
+                btnMars.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-red-500/20 text-red-200 border border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.2)]';
+                btnMoon.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-white border border-transparent';
+            } else {
+                btnMoon.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-amber-500/20 text-amber-200 border border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.2)]';
+                btnMars.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-400 hover:text-white border border-transparent';
+            }
+
+            renderExplorer();
+            selectSite(selectedSiteId, false);
+        }
+
+        function setIsolationMode(mode) {
+            isolationMode = mode;
+
+            // Update chip styles
+            document.querySelectorAll('.iso-chip').forEach(chip => {
+                if (chip.dataset.mode === mode) {
+                    chip.className = 'iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-blue-600 text-white border border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center gap-1.5';
+                } else {
+                    chip.className = 'iso-chip px-3.5 py-2 rounded-xl text-xs font-medium transition-all bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700/80 flex items-center gap-1.5';
+                }
+            });
+
+            const modeLabels = {
+                all: 'Active Filter: Multi-Parameter Weighted Profile',
+                pressure: 'ISOLATED PARAMETER: Air Pressure Only (mbar Barometric Analog)',
+                temperature: 'ISOLATED PARAMETER: Surface Temperature Only (°C / °F Thermal Analog)',
+                mineralogy: 'ISOLATED PARAMETER: Mineralogy & Regolith Chemistry Only',
+                topography: 'ISOLATED PARAMETER: Topography, Slope & Relief Only',
+                radiation: 'ISOLATED PARAMETER: Cosmic & UV Radiation Flux Only'
+            };
+
+            const sortHeaders = {
+                all: 'SORTED BY: OVERALL ANALOG %',
+                pressure: 'SORTED BY: AIR PRESSURE ANALOG %',
+                temperature: 'SORTED BY: TEMPERATURE ANALOG %',
+                mineralogy: 'SORTED BY: MINERALOGY ANALOG %',
+                topography: 'SORTED BY: TOPOGRAPHY ANALOG %',
+                radiation: 'SORTED BY: RADIATION ANALOG %'
+            };
+
+            document.getElementById('isolation-status-text').textContent = modeLabels[mode];
+            document.getElementById('ranking-metric-header').textContent = sortHeaders[mode];
+
+            // Dim custom sliders if single parameter is isolated
+            const slidersPanel = document.getElementById('weight-sliders-panel');
+            slidersPanel.style.opacity = mode === 'all' ? '1' : '0.4';
+            slidersPanel.style.pointerEvents = mode === 'all' ? 'auto' : 'none';
+
+            renderExplorer();
+            selectSite(selectedSiteId, false);
+        }
+
+        function computeSiteScore(site) {
+            const scores = activeTarget === 'mars' ? site.marsScores : site.moonScores;
+
+            if (isolationMode !== 'all') {
+                return Number(scores[isolationMode].toFixed(1));
+            }
+
+            const wP = parseInt(document.getElementById('w-pressure').value) || 50;
+            const wM = parseInt(document.getElementById('w-mineral').value) || 50;
+            const wT = parseInt(document.getElementById('w-thermal').value) || 50;
+
+            const weighted = (
+                scores.pressure * wP +
+                scores.mineralogy * wM +
+                scores.temperature * wT +
+                scores.topography * 75 +
+                scores.radiation * 70
+            ) / (wP + wM + wT + 145);
+
+            return Number(weighted.toFixed(1));
+        }
+
+        function getExactParameterSummary(site) {
+            const target = planetaryBaselines[activeTarget];
+            const score = computeSiteScore(site);
+
+            switch (isolationMode) {
+                case 'pressure':
+                    return `Air Pressure Analog: ${score}% — Earth Site: ${site.pressureMbar} mbar vs ${target.shortName}: ${target.pressureMbar} mbar`;
+                case 'temperature':
+                    return `Thermal Analog: ${score}% — Earth Site: ${site.tempC}°C (${Math.round(site.tempC * 9/5 + 32)}°F) vs ${target.shortName}: ${target.tempC}°C`;
+                case 'mineralogy':
+                    return `Mineralogy Analog: ${score}% — Dominant Composition: ${site.mineral1} & ${site.mineral2}`;
+                case 'topography':
+                    return `Topography Analog: ${score}% — Elevation: ${site.elevation} (${site.biome})`;
+                case 'radiation':
+                    return `Radiation Flux Analog: ${score}% — Surface Flux: ${site.radiationUSv} μSv/h (${site.fluxStatus})`;
+                default:
+                    return `Overall ${target.shortName}: ${score}% • Pressure: ${site.pressureMbar} mbar • Temp: ${site.tempC}°C • ${site.mineral1}`;
+            }
+        }
+
+        // -------------------------------------------------------------------
+        // 7. LEAFLET WORLD MAP & RANKED CARDS RENDERER
+        // -------------------------------------------------------------------
+        function initExplorerMap() {
+            explorerMap = L.map('explorerMap', {
+                center: [15, 0],
+                zoom: 2,
+                minZoom: 2,
+                maxZoom: 15
+            });
+
+            mapTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO | NASA Earthdata'
+            }).addTo(explorerMap);
+
+            mapMarkersGroup = L.layerGroup().addTo(explorerMap);
+        }
+
+        function switchMapTiles(type) {
+            const btnDark = document.getElementById('map-style-dark');
+            const btnSat = document.getElementById('map-style-sat');
+
+            if (mapTileLayer) explorerMap.removeLayer(mapTileLayer);
+
+            if (type === 'dark') {
+                mapTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap &copy; CARTO'
+                }).addTo(explorerMap);
+                btnDark.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-600 text-white';
+                btnSat.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white';
+            } else {
+                mapTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; NASA Earthdata'
+                }).addTo(explorerMap);
+                btnSat.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-600 text-white';
+                btnDark.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white';
+            }
+        }
+
+        function renderExplorer() {
+            document.getElementById('lbl-w-pressure').textContent = document.getElementById('w-pressure').value + '%';
+            document.getElementById('lbl-w-mineral').textContent = document.getElementById('w-mineral').value + '%';
+            document.getElementById('lbl-w-thermal').textContent = document.getElementById('w-thermal').value + '%';
+
+            const query = document.getElementById('site-search').value.toLowerCase().trim();
+            const checkedBiomes = Array.from(document.querySelectorAll('#biome-filter-group input:checked')).map(cb => cb.value);
+
+            const filtered = earthSites
+                .filter(site => checkedBiomes.includes(site.biome))
+                .filter(site => {
+                    if (!query) return true;
+                    return (
+                        site.name.toLowerCase().includes(query) ||
+                        site.country.toLowerCase().includes(query) ||
+                        site.mineral1.toLowerCase().includes(query) ||
+                        site.biome.toLowerCase().includes(query) ||
+                        String(site.pressureMbar).includes(query)
+                    );
+                })
+                .map(site => ({ ...site, computedScore: computeSiteScore(site) }))
+                .sort((a, b) => b.computedScore - a.computedScore);
+
+            document.getElementById('result-count').textContent = filtered.length;
+
+            const container = document.getElementById('ranked-sites-container');
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">No terrestrial analog locations match the current filter criteria.</div>`;
+            }
+
+            filtered.forEach((site, idx) => {
+                const isSelected = site.id === selectedSiteId;
+                const badgeColor = site.computedScore >= 90 ? 'text-blue-300 bg-blue-500/15 border-blue-500/40' :
+                                   site.computedScore >= 80 ? 'text-amber-300 bg-amber-500/15 border-amber-500/40' :
+                                   'text-slate-300 bg-slate-800 border-slate-700';
+
+                const card = document.createElement('div');
+                card.onclick = () => selectSite(site.id, true);
+                card.className = `p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    isSelected
+                    ? 'bg-blue-950/35 border-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                    : 'bg-[#070B14] hover:bg-slate-900/80 border-slate-800/90 hover:border-slate-700'
+                }`;
+
+                const latDir = site.lat >= 0 ? 'N' : 'S';
+                const lngDir = site.lng >= 0 ? 'E' : 'W';
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-mono text-[10px] font-bold text-slate-500">#${idx + 1}</span>
+                                <span class="text-[10px] font-mono px-2 py-0.2 rounded bg-slate-800/90 text-slate-300">${site.biome}</span>
+                                <span class="text-[10px] font-mono text-blue-400">${site.pressureMbar} mbar</span>
+                            </div>
+                            <h4 class="font-display font-semibold text-sm text-white truncate">${site.name}</h4>
+                            <p class="font-mono text-[11px] text-slate-400 mt-0.5">
+                                ${site.country} • ${Math.abs(site.lat).toFixed(2)}° ${latDir}, ${Math.abs(site.lng).toFixed(2)}° ${lngDir}
+                            </p>
+                        </div>
+                        <div class="px-2.5 py-1.5 rounded-xl border font-mono font-bold text-xs shrink-0 ${badgeColor}">
+                            ${site.computedScore}%
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Update Map Markers
+            if (mapMarkersGroup) {
+                mapMarkersGroup.clearLayers();
+                filtered.forEach(site => {
+                    const isSelected = site.id === selectedSiteId;
+                    const pinColor = isSelected ? '#00F0FF' : (site.computedScore >= 90 ? '#3B82F6' : '#F59E0B');
+
+                    const icon = L.divIcon({
+                        className: 'custom-telemetry-marker',
+                        html: `
+                            <div class="telemetry-pin" style="width: 24px; height: 24px;">
+                                <div class="telemetry-pulse" style="background-color: ${pinColor};"></div>
+                                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${pinColor}; border: 2px solid #04070D; box-shadow: 0 0 12px ${pinColor}; z-index: 2;"></div>
+                            </div>
+                        `,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+
+                    const marker = L.marker([site.lat, site.lng], { icon });
+                    marker.bindTooltip(`
+                        <div style="background:#0A101D; color:#fff; border:1px solid #1E293B; padding:5px 9px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+                            <strong style="color:${pinColor}">${site.computedScore}%</strong> ${site.name}<br/>
+                            <span style="color:#94A3B8; font-size:10px;">Pressure: ${site.pressureMbar} mbar | ${site.lat.toFixed(2)}°, ${site.lng.toFixed(2)}°</span>
+                        </div>
+                    `, { direction: 'top', offset: [0, -10], opacity: 1 });
+
+                    marker.on('click', () => selectSite(site.id, true));
+                    mapMarkersGroup.addLayer(marker);
+                });
+            }
+        }
+
+        // -------------------------------------------------------------------
+        // 8. SELECT SITE & SYNC BOTH EXPLORER AND COSMO™ EXPEDITION HUD
+        // -------------------------------------------------------------------
+        function selectSite(siteId, flyToLocation = true) {
+            selectedSiteId = siteId;
+            const site = earthSites.find(s => s.id === siteId) || earthSites[0];
+            const score = computeSiteScore(site);
+            const target = planetaryBaselines[activeTarget];
+
+            renderExplorer();
+
+            if (flyToLocation && explorerMap) {
+                explorerMap.flyTo([site.lat, site.lng], 5, { duration: 1.1 });
+            }
+
+            const latStr = `${Math.abs(site.lat).toFixed(4)}° ${site.lat >= 0 ? 'N' : 'S'}`;
+            const lngStr = `${Math.abs(site.lng).toFixed(4)}° ${site.lng >= 0 ? 'E' : 'W'}`;
+
+            // Update Explorer Top Bar
+            document.getElementById('map-selected-coords').textContent = `${latStr}, ${lngStr}`;
+            document.getElementById('map-selected-title').textContent = `${site.name}, ${site.country}`;
+            document.getElementById('map-selected-metric-label').textContent = isolationMode === 'all'
+                ? `${target.shortName} Match`
+                : `${isolationMode.toUpperCase()} Analog Match`;
+            document.getElementById('map-selected-score').textContent = `${score}%`;
+            document.getElementById('exact-parameter-detail').textContent = getExactParameterSummary(site);
+            document.getElementById('exact-site-elev').textContent = `Elev: ${site.elevation}`;
+
+            // Update COSMO™ Expedition HUD (Section 3)
+            const tempF = Math.round(site.tempC * 9 / 5 + 32);
+            document.getElementById('hud-wind').textContent = site.windKmh;
+            document.getElementById('hud-temp').textContent = tempF;
+            document.getElementById('hud-radiation').textContent = site.radiationUSv.toFixed(1);
+            document.getElementById('hud-purity').textContent = Math.round(score);
+            document.getElementById('hud-purity-label').textContent = isolationMode === 'pressure' ? 'Pressure Match' : 'Analog Purity';
+
+            document.getElementById('hud-pressure-sub').textContent = `Pressure: ${site.pressureMbar} mbar`;
+            document.getElementById('hud-flux-pct').textContent = `${site.fluxPct}%`;
+            document.getElementById('hud-flux-badge').textContent = site.fluxStatus;
+            document.getElementById('hud-rad-pill').textContent = `+${site.radiationUSv.toFixed(1)} μSv`;
+
+            document.getElementById('hud-expedition-pill').textContent = `Expedition • ${target.shortName}`;
+            document.getElementById('hud-zone-title').innerHTML = site.hudTitle;
+            document.getElementById('hud-zone-coords').textContent = `${latStr}, ${lngStr} • ELEVATION ${site.elevation.toUpperCase()}`;
+
+            // Update Right Histogram & Gauge
+            updateHistogramReadouts(site);
+            drawHistogramCanvas(site);
+
+            document.getElementById('gauge-mode-tag').textContent = isolationMode.toUpperCase();
+            document.getElementById('gauge-center-pct').textContent = `${score}%`;
+            document.getElementById('legend-item-1').textContent = site.mineral1;
+            document.getElementById('legend-item-2').textContent = site.mineral2;
+            drawRatioGauge(score);
+            drawWireframeProjection(site);
+
+            if (activeHudTab !== 'overview') {
+                setHudTab(activeHudTab);
+            }
+        }
+
+        // -------------------------------------------------------------------
+        // 9. COSMO™ HUD INTERACTIVE TABS, HISTOGRAM, GAUGE & 3D SPECIMEN CANVAS
+        // -------------------------------------------------------------------
+        function setHudTab(tab) {
+            activeHudTab = tab;
+            ['overview', 'matrix', 'mission'].forEach(t => {
+                const el = document.getElementById(`hud-tab-${t}`);
+                if (t === tab) {
+                    el.className = 'font-semibold text-[#231915] border-b-2 border-[#231915] pb-1 transition-all';
+                } else {
+                    el.className = 'hover:text-[#231915] text-[#231915]/70 pb-1 transition-all';
+                }
+            });
+
+            const overlay = document.getElementById('hud-center-overlay-card');
+            const site = earthSites.find(s => s.id === selectedSiteId) || earthSites[0];
+            const scores = activeTarget === 'mars' ? site.marsScores : site.moonScores;
+
+            if (tab === 'overview') {
+                overlay.classList.add('hidden');
+            } else if (tab === 'matrix') {
+                overlay.classList.remove('hidden');
+                overlay.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-white/20 pb-2 mb-3">
+                        <span class="font-display font-semibold text-sm">5-Axis Planetary Similarity Breakdown</span>
+                        <span class="font-mono text-[11px] text-amber-200">${activeTarget.toUpperCase()} BASELINE</span>
+                    </div>
+                    <div class="space-y-2.5 text-xs font-mono">
+                        ${renderMatrixRow('Air Pressure (' + site.pressureMbar + ' mbar)', scores.pressure)}
+                        ${renderMatrixRow('Thermal Profile (' + site.tempC + '°C)', scores.temperature)}
+                        ${renderMatrixRow('Mineralogy (' + site.mineral1 + ')', scores.mineralogy)}
+                        ${renderMatrixRow('Topography & Relief (' + site.elevation + ')', scores.topography)}
+                        ${renderMatrixRow('Radiation Flux (' + site.radiationUSv + ' μSv/h)', scores.radiation)}
+                    </div>
+                `;
+            } else if (tab === 'mission') {
+                overlay.classList.remove('hidden');
+                overlay.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-white/20 pb-2 mb-2.5">
+                        <span class="font-display font-semibold text-sm">NASA Field Testing & EVA Suitability</span>
+                        <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-white/20">${site.biome}</span>
+                    </div>
+                    <p class="text-xs leading-relaxed text-white/95 mb-3">${site.missionNotes}</p>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono bg-black/25 p-2.5 rounded-xl">
+                        <div>Coordinates: ${site.lat.toFixed(4)}°, ${site.lng.toFixed(4)}°</div>
+                        <div>Barometric: ${site.pressureMbar} mbar</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderMatrixRow(label, val) {
+            return `
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span>${label}</span>
+                        <span class="font-bold">${val}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
+                        <div class="h-full bg-white rounded-full" style="width: ${val}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setScanDimension(dim) {
+            scanDimension = dim;
+            const b3 = document.getElementById('btn-hud-3d');
+            const b2 = document.getElementById('btn-hud-2d');
+            if (dim === '3D') {
+                b3.className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-[#231915] shadow transition-all';
+                b2.className = 'px-4 py-1.5 rounded-full text-xs font-semibold text-white/85 hover:text-white transition-all';
+            } else {
+                b2.className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-[#231915] shadow transition-all';
+                b3.className = 'px-4 py-1.5 rounded-full text-xs font-semibold text-white/85 hover:text-white transition-all';
+            }
+        }
+
+        function setHistogramMode(mode) {
+            histogramMode = mode;
+            const bStruct = document.getElementById('btn-view-structure');
+            const bComp = document.getElementById('btn-view-composition');
+            if (mode === 'structure') {
+                bStruct.className = 'py-1 rounded-full text-xs font-medium bg-[#2B1D16] text-white shadow transition-all';
+                bComp.className = 'py-1 rounded-full text-xs font-medium text-[#231915]/80 hover:text-[#231915] transition-all';
+            } else {
+                bComp.className = 'py-1 rounded-full text-xs font-medium bg-[#2B1D16] text-white shadow transition-all';
+                bStruct.className = 'py-1 rounded-full text-xs font-medium text-[#231915]/80 hover:text-[#231915] transition-all';
+            }
+            const site = earthSites.find(s => s.id === selectedSiteId) || earthSites[0];
+            updateHistogramReadouts(site);
+            drawHistogramCanvas(site);
+        }
+
+        function updateHistogramReadouts(site) {
+            if (histogramMode === 'structure') {
+                document.getElementById('hist-val-min').textContent = site.densityMin;
+                document.getElementById('hist-val-cur').textContent = site.densityCur;
+                document.getElementById('hist-val-max').textContent = site.densityMax;
+            } else {
+                document.getElementById('hist-val-min').textContent = '6.1 mbar';
+                document.getElementById('hist-val-cur').textContent = `${site.pressureMbar} mbar`;
+                document.getElementById('hist-val-max').textContent = '1013 mbar';
+            }
+        }
+
+        // Draw Vertical Bar Histogram (Matches Reference Image 2 Right Panel)
+        function drawHistogramCanvas(site) {
+            const canvas = document.getElementById('histogramCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            ctx.clearRect(0, 0, w, h);
+
+            const bars = 46;
+            const barWidth = (w - 16) / bars;
+            const peakPos = histogramMode === 'structure' ? 0.34 : (site.pressureMbar / 1100);
+
+            for (let i = 0; i < bars; i++) {
+                const norm = i / bars;
+                const dist = Math.abs(norm - peakPos);
+                const val = Math.exp(-dist * dist * 28) * 0.78 + Math.sin(i * 0.6) * 0.08 + 0.12;
+                const barH = Math.max(4, Math.min(h - 14, val * (h - 14)));
+                const x = 8 + i * barWidth;
+                const y = h - 10 - barH;
+
+                ctx.fillStyle = dist < 0.14 ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.42)';
+                ctx.fillRect(x, y, Math.max(1.5, barWidth - 2), barH);
+            }
+
+            // Baseline & Two Selector Dots
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(8, h - 8);
+            ctx.lineTo(w - 8, h - 8);
+            ctx.stroke();
+
+            const dot1X = 8 + (w - 16) * Math.max(0.1, peakPos - 0.16);
+            const dot2X = 8 + (w - 16) * Math.min(0.9, peakPos + 0.22);
+
+            [dot1X, dot2X].forEach(dx => {
+                ctx.fillStyle = '#2B1D16';
+                ctx.beginPath();
+                ctx.arc(dx, h - 8, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+
+        // Draw Semi-Circular Analog Ratio Gauge (Matches Reference Image 2 Bottom-Right)
+        function drawRatioGauge(score) {
+            const canvas = document.getElementById('ratioGaugeCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height - 12;
+            const r = 74;
+
+            // Track Arc
+            ctx.lineWidth = 13;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI * 1.05, Math.PI * 1.95);
+            ctx.stroke();
+
+            // Active Progress Arc
+            const pct = Math.max(0, Math.min(1, score / 100));
+            const endAngle = Math.PI * (1.05 + 0.9 * pct);
+
+            const grad = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+            grad.addColorStop(0, '#FFFFFF');
+            grad.addColorStop(0.55, '#FDBA74');
+            grad.addColorStop(1, '#EA580C');
+
+            ctx.strokeStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI * 1.05, endAngle);
+            ctx.stroke();
+        }
+
+        // Draw Left Bottom "3D Projection" Wireframe Terrain Card
+        function drawWireframeProjection(site = earthSites[0]) {
+            const canvas = document.getElementById('wireframeProjectionCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            ctx.clearRect(0, 0, w, h);
+
+            // Wireframe Ridge Lines
+            const rows = 9;
+            const cols = 22;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.lineWidth = 0.8;
+
+            for (let r = 0; r < rows; r++) {
+                ctx.beginPath();
+                for (let c = 0; c <= cols; c++) {
+                    const x = (c / cols) * w;
+                    const peak1 = Math.exp(-Math.pow((c - 5) / 3.2, 2)) * 28;
+                    const peak2 = Math.exp(-Math.pow((c - 17) / 3.5, 2)) * 34;
+                    const wave = Math.sin(c * 0.7 + r) * 3;
+                    const y = h * 0.42 + r * 6.5 - (peak1 + peak2) * (1 - r / (rows * 1.3)) + wave;
+                    if (c === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Labeled Geological Pins ('Basalt', 'Sand', 'Fe₂O₃')
+            const pins = [
+                { label: 'Basalt', x: w * 0.22, y: h * 0.28 },
+                { label: 'Sand', x: w * 0.50, y: h * 0.56 },
+                { label: site.mineral1.split(' ')[0], x: w * 0.80, y: h * 0.24 }
+            ];
+
+            pins.forEach(p => {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x, p.y + 18);
+                ctx.stroke();
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y + 18, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.roundRect(p.x - 22, p.y - 12, 44, 15, 7);
+                ctx.fill();
+
+                ctx.fillStyle = '#231915';
+                ctx.font = '600 8px "JetBrains Mono", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.label, p.x, p.y - 2);
+            });
+        }
+
+        // Draw Center COSMO™ Procedural Desert Horizon + Scanned 3D Rock Specimen
+        function initCosmoTerrainCanvas() {
+            const canvas = document.getElementById('cosmoTerrainCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let isDragging = false;
+            let lastX = 0;
+
+            canvas.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+            window.addEventListener('mousemove', e => {
+                if (!isDragging) return;
+                meshRotationOffset += (e.clientX - lastX) * 0.015;
+                lastX = e.clientX;
+            });
+
+            canvas.addEventListener('touchstart', e => { isDragging = true; lastX = e.touches[0].clientX; }, { passive: true });
+            window.addEventListener('touchend', () => { isDragging = false; });
+            window.addEventListener('touchmove', e => {
+                if (!isDragging) return;
+                meshRotationOffset += (e.touches[0].clientX - lastX) * 0.015;
+                lastX = e.touches[0].clientX;
+            }, { passive: true });
+
+            function resize() {
+                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            let scanPhase = 0;
+            function render() {
+                scanPhase += 0.025;
+                const w = canvas.offsetWidth;
+                const h = canvas.offsetHeight;
+                ctx.clearRect(0, 0, w, h);
+
+                // 1. Warm Hazy Martian/Analog Sky Gradient
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.56);
+                skyGrad.addColorStop(0, '#F6EFEA');
+                skyGrad.addColorStop(0.65, '#EADBD0');
+                skyGrad.addColorStop(1, '#DFC8B9');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h * 0.56);
+
+                // 2. Distant Sunlit Mountain Ridges (Left & Right)
+                const horizonY = h * 0.52;
+
+                // Left Mountain Massif
+                const leftMtnGrad = ctx.createLinearGradient(0, horizonY - 120, w * 0.45, horizonY);
+                leftMtnGrad.addColorStop(0, '#785644');
+                leftMtnGrad.addColorStop(1, '#B8947E');
+                ctx.fillStyle = leftMtnGrad;
+                ctx.beginPath();
+                ctx.moveTo(0, horizonY);
+                ctx.lineTo(0, horizonY - 110);
+                ctx.lineTo(w * 0.14, horizonY - 65);
+                ctx.lineTo(w * 0.28, horizonY - 115);
+                ctx.lineTo(w * 0.37, horizonY - 135);
+                ctx.lineTo(w * 0.46, horizonY - 35);
+                ctx.lineTo(w * 0.54, horizonY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Right Mountain Ridge
+                const rightMtnGrad = ctx.createLinearGradient(w * 0.6, horizonY - 80, w, horizonY);
+                rightMtnGrad.addColorStop(0, '#C7A48E');
+                rightMtnGrad.addColorStop(1, '#8C624C');
+                ctx.fillStyle = rightMtnGrad;
+                ctx.beginPath();
+                ctx.moveTo(w * 0.58, horizonY);
+                ctx.lineTo(w * 0.72, horizonY - 42);
+                ctx.lineTo(w * 0.88, horizonY - 68);
+                ctx.lineTo(w, horizonY - 115);
+                ctx.lineTo(w, horizonY);
+                ctx.closePath();
+                ctx.fill();
+
+                // 3. Regolith Desert Floor Plane
+                const floorGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+                floorGrad.addColorStop(0, '#C69779');
+                floorGrad.addColorStop(0.35, '#9B5B3E');
+                floorGrad.addColorStop(1, '#582F1E');
+                ctx.fillStyle = floorGrad;
+                ctx.fillRect(0, horizonY, w, h - horizonY);
+
+                // Subtle Surface Regolith Ripples & Pebbles
+                ctx.fillStyle = 'rgba(62, 32, 18, 0.25)';
+                for (let i = 0; i < 24; i++) {
+                    const rx = ((i * 173) % w);
+                    const ry = horizonY + 18 + ((i * 97) % (h - horizonY - 25));
+                    const rw = 12 + (i % 24);
+                    ctx.beginPath();
+                    ctx.ellipse(rx, ry, rw, rw * 0.25, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 4. Central Geological Specimen Boulder (Matches Reference Image 2 Center)
+                const rockX = w * 0.5;
+                const rockY = h * 0.68;
+                const rockR = Math.min(w * 0.13, 98);
+
+                // Cast Shadow on Regolith Floor
+                ctx.fillStyle = 'rgba(36, 18, 10, 0.55)';
+                ctx.beginPath();
+                ctx.moveTo(rockX - rockR * 0.95, rockY + rockR * 0.55);
+                ctx.lineTo(rockX - rockR * 1.15, h);
+                ctx.lineTo(rockX + rockR * 0.65, h);
+                ctx.lineTo(rockX + rockR * 0.95, rockY + rockR * 0.55);
+                ctx.closePath();
+                ctx.fill();
+
+                // 3D Boulder Silhouette
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(rockX, rockY - rockR * 1.15);
+                ctx.bezierCurveTo(rockX + rockR * 0.75, rockY - rockR * 0.7, rockX + rockR * 1.12, rockY + rockR * 0.2, rockX + rockR * 0.9, rockY + rockR * 0.75);
+                ctx.bezierCurveTo(rockX + rockR * 0.3, rockY + rockR * 0.95, rockX - rockR * 0.5, rockY + rockR * 0.95, rockX - rockR * 0.92, rockY + rockR * 0.68);
+                ctx.bezierCurveTo(rockX - rockR * 1.05, rockY + rockR * 0.1, rockX - rockR * 0.65, rockY - rockR * 0.75, rockX, rockY - rockR * 1.15);
+                ctx.closePath();
+
+                const rockGrad = ctx.createLinearGradient(rockX - rockR, rockY - rockR, rockX + rockR, rockY + rockR);
+                rockGrad.addColorStop(0, '#A8795B');
+                rockGrad.addColorStop(0.45, '#784A32');
+                rockGrad.addColorStop(1, '#2D1910');
+                ctx.fillStyle = rockGrad;
+                ctx.fill();
+                ctx.clip();
+
+                // Interactive Wireframe Scan Grid Overlay on Rock (3D vs 2D mode)
+                ctx.strokeStyle = scanDimension === '3D' ? 'rgba(255, 255, 255, 0.34)' : 'rgba(56, 189, 248, 0.45)';
+                ctx.lineWidth = 1;
+
+                const gridLines = 7;
+                for (let i = -gridLines; i <= gridLines; i++) {
+                    const offset = (i / gridLines) * rockR + Math.sin(meshRotationOffset + i * 0.4) * 8;
+                    // Vertical longitude arcs
+                    ctx.beginPath();
+                    ctx.moveTo(rockX, rockY - rockR * 1.15);
+                    ctx.quadraticCurveTo(rockX + offset * 1.35, rockY, rockX + offset * 0.85, rockY + rockR * 0.9);
+                    ctx.stroke();
+
+                    // Horizontal latitude contour rings
+                    const yPos = rockY - rockR * 0.8 + ((i + gridLines) / (gridLines * 2)) * rockR * 1.65;
+                    ctx.beginPath();
+                    ctx.ellipse(rockX, yPos, rockR * 0.95, scanDimension === '3D' ? 10 : 2, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Animated Horizontal Laser Scan Beam
+                const beamY = rockY + Math.sin(scanPhase) * (rockR * 0.65);
+                const beamGrad = ctx.createLinearGradient(rockX - rockR, beamY, rockX + rockR, beamY);
+                beamGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                beamGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+                beamGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.strokeStyle = beamGrad;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(rockX - rockR, beamY);
+                ctx.lineTo(rockX + rockR, beamY);
+                ctx.stroke();
+
+                ctx.restore();
+
+                // Top Apex White Triangle Indicator on Specimen
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.moveTo(rockX, rockY - rockR * 1.12);
+                ctx.lineTo(rockX - 6, rockY - rockR * 1.24);
+                ctx.lineTo(rockX + 6, rockY - rockR * 1.24);
+                ctx.closePath();
+                ctx.fill();
+
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+
+        // -------------------------------------------------------------------
+        // 10. CUSTOM SITE SUBMISSION & REPORT EXPORT
+        // -------------------------------------------------------------------
+        function toggleCustomModal() {
+            const modal = document.getElementById('customSiteModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function submitCustomSite(e) {
+            e.preventDefault();
+            const name = document.getElementById('cust-name').value.trim();
+            const country = document.getElementById('cust-country').value.trim();
+            const lat = parseFloat(document.getElementById('cust-lat').value);
+            const lng = parseFloat(document.getElementById('cust-lng').value);
+            const pressure = parseFloat(document.getElementById('cust-pressure').value);
+            const tempC = parseFloat(document.getElementById('cust-temp').value);
+            const biome = document.getElementById('cust-biome').value;
+
+            // Compute realistic analog percentages from input pressure & temperature
+            const marsPressSim = Math.max(58, Math.min(98, 100 - Math.abs(pressure - 6.1) * 0.032));
+            const moonPressSim = Math.max(56, Math.min(97, 100 - pressure * 0.033));
+            const marsTempSim = Math.max(60, Math.min(97, 100 - Math.abs(tempC - (-63)) * 0.35));
+            const moonTempSim = Math.max(58, Math.min(96, 100 - Math.abs(tempC - (-130)) * 0.22));
+
+            const newId = 'custom-' + Date.now();
+            const newSite = {
+                id: newId,
+                name: name,
+                hudTitle: name.toUpperCase().slice(0, 14) + ' /<br>FIELD SITE',
+                country: country,
+                lat: lat,
+                lng: lng,
+                elevation: `${Math.max(0, Math.round((1013 - pressure) * 8.4))} m`,
+                biome: biome,
+                pressureMbar: pressure,
+                tempC: tempC,
+                windKmh: 31,
+                radiationUSv: 0.65,
+                fluxPct: 54,
+                fluxStatus: 'Nominal',
+                densityMin: '1.3 g/cm³',
+                densityCur: '3.0 g/cm³',
+                densityMax: '7.1 g/cm³',
+                mineral1: 'Basaltic Regolith',
+                mineral2: 'Silicate Oxide',
+                marsScores: {
+                    pressure: Number(marsPressSim.toFixed(1)),
+                    temperature: Number(marsTempSim.toFixed(1)),
+                    mineralogy: 88.5,
+                    topography: 86.0,
+                    radiation: 82.0
+                },
+                moonScores: {
+                    pressure: Number(moonPressSim.toFixed(1)),
+                    temperature: Number(moonTempSim.toFixed(1)),
+                    mineralogy: 85.0,
+                    topography: 84.5,
+                    radiation: 80.5
+                },
+                missionNotes: `User-submitted terrestrial field candidate at ${lat.toFixed(3)}°, ${lng.toFixed(3)}° with measured atmospheric pressure of ${pressure} mbar and mean temperature of ${tempC}°C.`
+            };
+
+            earthSites.unshift(newSite);
+            toggleCustomModal();
+            selectSite(newId, true);
+            document.getElementById('preference-explorer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function downloadMissionReport() {
+            const site = earthSites.find(s => s.id === selectedSiteId) || earthSites[0];
+            const score = computeSiteScore(site);
+            const target = planetaryBaselines[activeTarget];
+
+            const reportPayload = {
+                mission: '2026 NASA Space Apps Challenge — COSMO™ TERRA-ANALOG',
+                timestamp: new Date().toISOString(),
+                planetaryTarget: target.label,
+                scientistIsolationPreference: isolationMode,
+                analogSimilarityPercentage: `${score}%`,
+                earthLocation: {
+                    name: site.name,
+                    country: site.country,
+                    coordinates: { latitude: site.lat, longitude: site.lng },
+                    elevation: site.elevation,
+                    biome: site.biome
+                },
+                telemetryMeasurements: {
+                    airPressureMbar: site.pressureMbar,
+                    targetPressureMbar: target.pressureMbar,
+                    meanTemperatureC: site.tempC,
+                    windSpeedKmh: site.windKmh,
+                    radiationUSvPerHour: site.radiationUSv,
+                    primaryMineralogy: [site.mineral1, site.mineral2]
+                },
+                parameterBreakdown: activeTarget === 'mars' ? site.marsScores : site.moonScores,
+                missionSuitabilitySummary: site.missionNotes
+            };
+
+            const blob = new Blob([JSON.stringify(reportPayload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `COSMO_NASA_Analog_Report_${site.id}_${activeTarget}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
