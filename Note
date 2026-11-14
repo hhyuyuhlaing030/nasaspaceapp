@@ -1,6 +1,13 @@
-Earth 
+Earth Map
 Click any location or region
 Show the region's analog percentages according to the sectors
-The sectors: Moon > Geology, Elevation, Slope, Terrain Roughness, Crator/landform, Temperature Index, Water/Resources, Aridity, Rainfall
-             Mars > Geology, Elevation, Slope, Aridity, Rainfall, Temperature Index, Atmospheric Pressure, Humidity, Wind Speed, Solar Radiation, Radiation Level, Soil pH, Soil Depth, Rock Density, Water/Ice Content, Terrain Roughness
-Overall data description for each location: latitude, longitude, nearest airport, Exceptional Considerations to the actual sites on Moon and Mars
+Sectors:
+* Moon > Geology, Elevation, Slope, Terrain Roughness, Crater/landform, Temperature Index, Water/Resources, Aridity, Rainfall
+* Mars > Geology, Elevation, Slope, Aridity, Rainfall, Temperature Index, Atmospheric Pressure, Humidity, Wind Speed, Solar Radiation, Radiation Level, Soil pH, Soil Depth, Rock Density, Water/Ice Content, Terrain Roughness
+
+
+Overall data description for each location:
+* Latitude
+* Longitude
+* Nearest airport
+* Exceptional Considerations to the actual sites on Moon and Mars
